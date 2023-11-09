@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		fmt.Println("Please provide the number of goroutines as a command-line argument.")
 		os.Exit(1)
 	}
@@ -24,8 +24,8 @@ func main() {
 	}
 
 	startTime := time.Now()
-	filePath := "../assets/file.txt"
-	data, err := file.ReadFile(filePath)
+	filePath := os.Args[2]
+	data, err := file.ReadFile("../assets/" + filePath)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
