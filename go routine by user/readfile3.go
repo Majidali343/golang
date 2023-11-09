@@ -5,11 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Please provide the number of goroutines as a command-line argument.")
+		os.Exit(1)
+	}
 
 	numGoroutines, err := strconv.Atoi(os.Args[1])
 	if err != nil {
@@ -26,21 +29,32 @@ func main() {
 	}
 
 	segmentSize := len(data) / numGoroutines
-	var segments [][]byte
+
+	doneCh := make(chan struct{})
+
+	partialResultCh := make(chan Calculation)
+
+	go func() {
+		var totalCalculation Calculation
+
+		for i := 0; i < numGoroutines; i++ {
+			partialResult := <-partialResultCh
+			totalCalculation.PunctuationCount += partialResult.PunctuationCount
+			totalCalculation.VowelCount += partialResult.VowelCount
+			totalCalculation.WordCount += partialResult.WordCount
+			totalCalculation.LineCount += partialResult.LineCount
+		}
+
+		fmt.Printf("Total details are %+v \n", totalCalculation)
+
+		close(doneCh)
+	}()
 
 	for i := 0; i < numGoroutines; i++ {
-		segments = append(segments, data[i*segmentSize:(i+1)*segmentSize])
+		go counting(data[i*segmentSize:(i+1)*segmentSize], partialResultCh, doneCh)
 	}
 
-	var wg sync.WaitGroup
-
-	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
-		go counting(segments[i], &wg)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
+	<-doneCh
 
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime).Milliseconds()
@@ -54,22 +68,26 @@ type Calculation struct {
 	LineCount        int
 }
 
-func counting(data []byte, wg *sync.WaitGroup) {
-	defer wg.Done() // Decrement the WaitGroup counter when the goroutine completes
-
+func counting(data []byte, resultCh chan<- Calculation, doneCh <-chan struct{}) {
 	var calculation Calculation
 
 	for _, char := range data {
-		if char == '\n' {
-			calculation.LineCount++
-		} else if char == '!' || char == '"' || char == '$' || char == '*' || char == '.' || char == '<' || char == '?' || char == '~' || char == '{' || char == '`' {
-			calculation.PunctuationCount++
-		} else if char == 'a' || char == 'A' || char == 'e' || char == 'E' || char == 'i' || char == 'I' || char == 'O' || char == 'o' || char == 'u' || char == 'U' {
-			calculation.VowelCount++
-		} else if char == '\t' || char == ' ' || char == '\n' || char == '\r' {
-			calculation.WordCount++
+		select {
+		case <-doneCh:
+
+			return
+		default:
+			if char == '\n' {
+				calculation.LineCount++
+			} else if char == '!' || char == '"' || char == '$' || char == '*' || char == '.' || char == '<' || char == '?' || char == '~' || char == '{' || char == '`' {
+				calculation.PunctuationCount++
+			} else if char == 'a' || char == 'A' || char == 'e' || char == 'E' || char == 'i' || char == 'I' || char == 'O' || char == 'o' || char == 'u' || char == 'U' {
+				calculation.VowelCount++
+			} else if char == '\t' || char == ' ' || char == '\n' || char == '\r' {
+				calculation.WordCount++
+			}
 		}
 	}
 
-	fmt.Printf("Details are %+v \n", calculation)
+	resultCh <- calculation
 }
