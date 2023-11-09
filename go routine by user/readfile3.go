@@ -51,6 +51,8 @@ func main() {
 	}()
 
 	for i := 0; i < numGoroutines; i++ {
+
+
 		go counting(data[i*segmentSize:(i+1)*segmentSize], partialResultCh, doneCh)
 	}
 
