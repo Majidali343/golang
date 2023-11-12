@@ -3,35 +3,33 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strconv"
+	// "strconv"
 	"time"
 	"wordcount/internal/calculation"
 	"wordcount/internal/file"
 	"wordcount/package/counting"
+	"wordcount/cmd/commands"
+	
+	
 )
 
-func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Please provide the number of goroutines as a command-line argument.")
-		os.Exit(1)
-	}
 
-	numGoroutines, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		fmt.Println("Invalid input for num_goroutines:", err)
-		os.Exit(1)
-	}
+
+
+func main() {
+	
+	cobraargs.Execute()
 
 	startTime := time.Now()
-	filePath := os.Args[2]
-	data, err := file.ReadFile("../assets/" + filePath)
+
+
+	data, err := file.ReadFile("../assets/" + cobraargs.FileName)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
 	}
 
-	segmentSize := len(data) / numGoroutines
+	segmentSize := len(data) / cobraargs.Routines
 
 	doneCh := make(chan struct{})
 
@@ -40,7 +38,7 @@ func main() {
 	go func() {
 		var totalCalculation calculation.Calculation
 
-		for i := 0; i < numGoroutines; i++ {
+		for i := 0; i < cobraargs.Routines; i++ {
 			partialResult := <-partialResultCh
 			totalCalculation.PunctuationCount += partialResult.PunctuationCount
 			totalCalculation.VowelCount += partialResult.VowelCount
@@ -53,7 +51,7 @@ func main() {
 		close(doneCh)
 	}()
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := 0; i < cobraargs.Routines; i++ {
 		go counting.Count(data[i*segmentSize:(i+1)*segmentSize], partialResultCh, doneCh)
 	}
 
