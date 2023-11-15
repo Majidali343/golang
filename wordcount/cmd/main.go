@@ -7,7 +7,7 @@ import (
 	"time"
 	"wordcount/internal/calculation"
 	"wordcount/internal/file"
-	"wordcount/package/counting"
+	"wordcount/pkg/counting"
 	"wordcount/cmd/commands"
 	
 	
