@@ -13,7 +13,6 @@ var (
 	FileName   string
 )
 
-
 var RootCmd = &cobra.Command{
 	Use:   "wordcount",
 	Short: "My application will manuplate the file and data inside the file ",
